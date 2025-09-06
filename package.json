@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "dependencies": {
+    "express": "^5.1.0",
+    "jsdom": "^26.1.0",
+    "kafkajs": "^2.2.4",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^24.16.2"
+  }
+}

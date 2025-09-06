@@ -1,0 +1,182 @@
+import express from 'express';
+import * as puppeteer from 'puppeteer';
+
+const app = express();
+app.use(express.json()); // parse JSON bodies
+
+// Helper function to wait
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+app.post('/search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error: 'Missing query field' });
+
+
+const words = query.searched.split(' ');
+
+  // Take all words before the first filter (any word containing '=')
+  const topicsArray = [];
+  for (const word of words) {
+    if (word.includes('=')) break; // stop at first filter
+    topicsArray.push(word);
+  }
+
+  const results = [];
+  const  resultssite = [];
+
+  try {
+    // Launch a temporary browser just for searching Brave
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer',
+        '--window-size=1280,800'
+      ]
+    });
+
+    const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+    );
+
+    await page.goto(`https://${query.searchEngine}`, { waitUntil: 'domcontentloaded' });
+    await wait(3000);
+
+    await page.type('textarea#searchbox', query.searched, { delay: 50 });
+    await wait(1000);
+    await page.click('#submit-button');
+    await wait(10000);
+
+    const links = await page.$$eval('#results a[href]', els =>
+      els
+        .map(a => a.href)
+        .filter(href => !href.includes('search.brave.com'))
+    );
+
+    await page.close();
+    await browser.close();
+
+
+for (const linksite of query.site) {
+      let linksiteBrowser;
+      let tabsite;
+      let htmlsite = '';
+
+     try {
+        linksiteBrowser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--window-size=1280,800'  
+          ]
+        });
+
+        tabsite = await linksiteBrowser.newPage();
+        await tabsite.goto(`${linksite}`, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await wait(5000);
+
+try {
+  htmlsite = await tabsite.evaluate(() => {
+    function getTextWithTag(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent.trim();
+        if (text) {
+          const parentTag = node.parentElement ? node.parentElement.tagName.toLowerCase() : 'unknown';
+          return `<${parentTag}> ${text} </${parentTag}>`;
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        // Recursively process children
+        return Array.from(node.childNodes)
+          .map(getTextWithTag)
+          .filter(Boolean)
+          .join("\n");
+      }
+      return null;
+    }
+
+    return getTextWithTag(document.body);
+  });
+} catch (frameErr) {
+  console.log('Frame detached or JS error, skipping:', frameErr.message);
+}
+
+ if (htmlsite) {
+      resultssite.push({ urlsite: linksite, htmlsite });
+      console.log('Found query in:', htmlsite);
+    }
+
+      } catch (err) {
+        console.log('Failed to scrape', htmlsite, err.message);
+      } finally {
+        if (tabsite) try { await tabsite.close(); } catch {}
+        if (linksiteBrowser) try { await linksiteBrowser.close(); } catch {}
+      }
+    }
+
+    // Process each link in a separate browser instance
+    for (const link of links) {
+      let linkBrowser;
+      let tab;
+      let text = '';
+
+      try {
+        linkBrowser = await puppeteer.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--window-size=1280,800'
+          ]
+        });
+
+        tab = await linkBrowser.newPage();
+        await tab.goto(link, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        await wait(5000);
+
+        try {
+          text = await tab.evaluate(() => document.body.innerText);
+        } catch (frameErr) {
+          console.log('Frame detached or JS error, skipping:', frameErr.message);
+        }
+
+ if (text) {
+    const found = topicsArray.some(word => text.toLowerCase().includes(word.toLowerCase()));
+    if (found) {
+      results.push({ url: link, text });
+      console.log('Found query in:', link);
+     }
+    }
+
+      } catch (err) {
+        console.log('Failed to scrape', link, err.message);
+      } finally {
+        if (tab) try { await tab.close(); } catch {}
+        if (linkBrowser) try { await linkBrowser.close(); } catch {}
+      }
+    }
+
+    res.json({ results, resultssite });
+
+  } catch (err) {
+    console.error('Error in Puppeteer run:', err);
+    res.status(500).json({ error: 'Scraping failed', details: err.message });
+  }
+});
+
+// Start Express server
+const PORT = 3001;
+app.listen(PORT, () => {
+  console.log(`Scraper server listening on port ${PORT}`);
+});
