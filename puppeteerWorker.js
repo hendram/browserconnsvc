@@ -191,8 +191,16 @@ return await scrapeonlysite(query, results);
     // --- SCRAPE SPECIFIC SITES ---
 async function scrapeonlysite(query, results) {
   const resultssite = [];
+  let newscraprequest = [];
 
-    for (const linksite of query.query.site) {
+     if(query.query.site){
+        newscraprequest = query.query.site;
+      }
+     else {
+        newscraprequest = query.query.onlyforsite.site
+      }
+
+    for (const linksite of newscraprequest) {
       let linksiteBrowser;
       let tabsite;
       let htmlsite = "";
@@ -240,7 +248,8 @@ async function scrapeonlysite(query, results) {
         }
 
         if (htmlsite) {
-          resultssite.push({ htmlsite, metadata: { url: linksite, date: new Date().toISOString(), sourcekb: "external", searched: query.query.search }});
+          resultssite.push({ htmlsite, metadata: { url: linksite, date: new Date().toISOString(), sourcekb: "external", 
+          searched: query.query.searched || query.query.onlyforsite.ignoresearched}});
           console.log(" ^|^e Found query in site:", linksite);
         }
       } catch (err) {
