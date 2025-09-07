@@ -81,7 +81,7 @@ if (query.query.corporate) {
 
  const searched = query.query.searched || ""; // make sure it's a string
   if(!searched){
-      searchonlysite(query);
+   return await scrapeonlysite(query, []);
        }
   const words = searched.split(/\s+/); // split by spaces
 
@@ -94,7 +94,6 @@ if (query.query.corporate) {
   console.log("topicsArray:", topicsArray);
 
   const results = [];
-  const resultssite = [];
 
     // --- NORMAL SEARCH FLOW ---
     const browser = await puppeteer.launch({
@@ -135,6 +134,7 @@ if (query.query.corporate) {
 
 
     // --- SCRAPE SEARCH RESULTS LINKS ---
+
     for (const link of links) {
       let linkBrowser;
       let tab;
@@ -168,7 +168,7 @@ if (query.query.corporate) {
             text.toLowerCase().includes(word.toLowerCase())
           );
           if (found) {
-            results.push({ url: link, text });
+            results.push({ text, metadata: { url: link, date: new Date().toISOString(), sourcekb: "external", searched: searched } });
             console.log(" ^|^e Found query in link:", link);
           }
         }
@@ -179,18 +179,19 @@ if (query.query.corporate) {
         if (linkBrowser) try { await linkBrowser.close(); } catch {}
       }
     }
+return await scrapeonlysite(query, results);
 
-    return { results, resultssite };
   } catch (err) {
     console.error("Error in Puppeteer run:", err);
     return { error: "Scraping failed", details: err.message };
   }
-scrapeonlysite();
 
 }
 
     // --- SCRAPE SPECIFIC SITES ---
-async function scrapeonlysite(query) {
+async function scrapeonlysite(query, results) {
+  const resultssite = [];
+
     for (const linksite of query.query.site) {
       let linksiteBrowser;
       let tabsite;
@@ -239,8 +240,7 @@ async function scrapeonlysite(query) {
         }
 
         if (htmlsite) {
-          resultssite.push({ htmlsite, metadata: { url: linksite, date: timestamp, sourcekb: "external", 
-          searched: query.query.search }});
+          resultssite.push({ htmlsite, metadata: { url: linksite, date: new Date().toISOString(), sourcekb: "external", searched: query.query.search }});
           console.log(" ^|^e Found query in site:", linksite);
         }
       } catch (err) {
@@ -250,4 +250,6 @@ async function scrapeonlysite(query) {
         if (linksiteBrowser) try { await linksiteBrowser.close(); } catch {}
       }
     }
+    return { results, resultssite };
+
 }
