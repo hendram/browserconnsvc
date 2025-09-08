@@ -62,6 +62,7 @@ if (query.query.corporate) {
               url,
               retrieved_at: new Date().toISOString(),
               sourcekb: "internal",
+              topic: query.query.topic,
             },
           },
         ],
