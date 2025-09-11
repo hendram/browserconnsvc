@@ -10,7 +10,7 @@ async function startWorker() {
 
   await consumer.run({
     autoCommit: false, // manual commit
-    eachMessage: async ({ topic, partition, message }) => {
+    eachMessage: async ({topic, partition, message }) => {
       const offset = message.offset;
       let job;
 
