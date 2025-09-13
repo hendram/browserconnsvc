@@ -47,17 +47,19 @@ cd /home/browserconnsvc
 node index.js
 ```
 
-How It Works
+## ⚙️ How It Works
 
-Backend Request → The service first receives jobs from chunkgeneratorforaimodel.
+Every job starts from the **backend (`chunkgeneratorforaimodel`)** and flows through the Puppeteer Service.  
+Depending on the type of request, the service decides what to scrape:  
 
-Decision Flow:
+1. 📩 **Receive Job**  
+   The backend sends a request to the Puppeteer Service with scraping instructions.  
 
-Scrape search engine links only 🟣
+2. 🔀 **Decision Stage**  
+   The service chooses the scraping mode:  
+   - 🟣 **Search Engine Mode** → Collects links from [Brave Search](https://search.brave.com).  
+   - 🔵 **External Mode** → Scrapes a target URL if `_external` data already exists in **TiDB**.  
+   - 🟢 **Internal Mode** → Crawls internal company knowledge base websites.  
 
-Scrape external site (if _external DB is built on TiDB) 🔵
-
-Scrape internal company knowledge base 🟢
-
-Return Data → Results are sent back to the backend for further processing.
-
+3. 📤 **Return Results**  
+   Once scraping is complete, the extracted data is sent back to the backend for processing, storage, or downstream AI models.  
