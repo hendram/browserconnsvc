@@ -5,8 +5,6 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function runScraper(query) {
 
-console.log(query);
- 
   try {
     // --- CORPORATE SHORTCUT ---
 if (query.query && query.query.corporate) {
@@ -94,7 +92,6 @@ if (query.query && query.query.corporate) {
     if (word.includes("=")) break; // stop when hitting first filter
     topicsArray.push(word);
   }
-  console.log("topicsArray:", topicsArray);
 
   const results = [];
 
@@ -134,8 +131,6 @@ if (query.query && query.query.corporate) {
     await page.close();
     await browser.close();
 
-console.log(links);
-
   return {links, topicsArray, searched};
 }
 catch (err) {
@@ -146,7 +141,6 @@ catch (err) {
 
     // --- SCRAPE SPECIFIC SITES ---
 async function scrapeonlysite(query) {
- console.log(query);
   const resultssite = [];
   let newscraprequest = [];
 
@@ -207,7 +201,6 @@ async function scrapeonlysite(query) {
         if (htmlsite) {
           resultssite.push({ htmlsite, metadata: { url: linksite, date: new Date().toISOString(), sourcekb: "external", 
           searched: query.query.searched || query.query.ignoresearched}});
-          console.log(" ^|^e Found query in site:", linksite);
         }
       } catch (err) {
         console.log(" ^}^l Failed to scrape site:", linksite, err.message);
