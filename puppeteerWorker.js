@@ -3,7 +3,22 @@ import * as puppeteer from "puppeteer";
 // helper
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function logSearchResults({ links, topicsArray, searched }) {
+  console.log(JSON.stringify({
+    level: "INFO",
+    timestamp: new Date().toISOString(),
+    logger: "web-scraper",
+    message: "Search completed successfully",
+    topics: topicsArray,
+    searched_query: searched,
+    results_count: links.length,
+    sample_link: links.length > 0 ? links[0] : null
+  }));
+}
+
 export async function runScraper(query) {
+
+let resultscorporate = {};
 
   try {
     // --- CORPORATE SHORTCUT ---
@@ -53,8 +68,7 @@ if (query.query && query.query.corporate) {
       console.log(" ^}^l Failed to extract corporate HTML:", err.message);
     }
 
-    return {
-      results: {
+      resultscorporate = {
         corporate: [
           {
             text: html,
@@ -66,8 +80,42 @@ if (query.query && query.query.corporate) {
             },
           },
         ],
-      },
-    };
+      };
+
+// --- Sanity check for corporate result format ---
+const corporateEntry = resultscorporate?.corporate?.[0];
+const isValidCorporate =
+  corporateEntry &&
+  typeof corporateEntry.text === "string" &&
+  corporateEntry.metadata &&
+  typeof corporateEntry.metadata.url === "string" &&
+  typeof corporateEntry.metadata.topic === "string" &&
+  typeof corporateEntry.metadata.retrieved_at === "string";
+
+// Format timestamp like [2025-09-13 19:34:10,724]
+const now = new Date();
+const ts = now
+  .toISOString()
+  .replace("T", " ")
+  .replace("Z", "")
+  .replace(/\.\d+/, (ms) => {
+    const padded = (ms.slice(1, 4) + "000").slice(0, 3); // force 3 digits
+    return "," + padded;
+  });
+
+if (isValidCorporate) {
+  console.log(
+    `[${ts}] INFO [CorporateValidator] Corporate payload sent successfully (puppeteerWorker.js)`
+  );
+} else {
+  console.log(
+    `[${ts}] ERROR [CorporateValidator] Corporate payload missing required fields (puppeteerWorker.js)`
+  );
+}
+ 
+
+ return  { resultscorporate  };
+
   } catch (err) {
     console.error("Corporate scrape failed:", err);
     return {
@@ -131,6 +179,8 @@ if (query.query && query.query.corporate) {
     await page.close();
     await browser.close();
 
+    logSearchResults({ links, topicsArray, searched });
+
   return {links, topicsArray, searched};
 }
 catch (err) {
@@ -138,6 +188,22 @@ catch (err) {
     return { error: "Scraping failed", details: err.message };
   }
 }
+
+// Utility function for resultssite structured logging
+function logResultssite(resultssite) {
+  const inserted_count = resultssite.length;
+  const allOk = inserted_count > 0; // simple check: at least one site scraped
+
+  console.log(JSON.stringify({
+    level: allOk ? "INFO" : "WARN",
+    timestamp: new Date().toISOString(),
+    logger: "resultssite",
+    message: allOk ? "All sites scraped successfully" : "Some sites failed to scrape",
+    inserted_count: inserted_count,
+    sample_url: inserted_count > 0 ? resultssite[0].metadata.url : null
+  }));
+}
+
 
     // --- SCRAPE SPECIFIC SITES ---
 async function scrapeonlysite(query) {
@@ -182,6 +248,7 @@ async function scrapeonlysite(query) {
                   const parentTag = node.parentElement
                     ? node.parentElement.tagName.toLowerCase()
                     : "unknown";
+
                   return `<${parentTag}> ${text} </${parentTag}>`;
                 }
               } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -209,6 +276,12 @@ async function scrapeonlysite(query) {
         if (linksiteBrowser) try { await linksiteBrowser.close(); } catch {}
       }
     }
+
+// Example usage after scraping
+if (resultssite && Array.isArray(resultssite)) {
+  logResultssite(resultssite);
+}
+
     return {resultssite };
 
 }
