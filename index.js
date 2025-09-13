@@ -6,8 +6,6 @@ async function startWorker() {
 
   await consumer.subscribe({ topic: "fromscrap", fromBeginning: false });
 
-  console.log(" ^=^z^` Puppeteer worker is listening for jobs on 'fromscrap'...");
-
   await consumer.run({
     autoCommit: false, // manual commit
     eachMessage: async ({topic, partition, message }) => {
@@ -23,8 +21,6 @@ async function startWorker() {
         return;
       }
 
-      console.log(" ^=^s  Received job:", job);
-
       try {
         // Run Puppeteer scraping
         const result = await runScraper(job);
@@ -34,8 +30,6 @@ async function startWorker() {
           topic: "toscrap-results",
           messages: [{ value: JSON.stringify(result) }],
         });
-
-        console.log(" ✅ Job processed and results sent.");
 
         // Commit offset **after success**
         await consumer.commitOffsets([{ topic, partition, offset: (Number(offset) + 1).toString() }]);
