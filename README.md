@@ -225,7 +225,7 @@ Ensures both producer & consumer are ready before job processing begins
 
 ---
 
-# 🌐 Scraper Module (/lib/puppeteerWorker.js)
+# 🌐 Scraper Module (puppeteerWorker.js)
 
 This module provides web scraping capabilities using Puppeteer, with specialized flows for corporate sites, general search engines, and specific site scraping. It includes structured logging and validation to ensure reliable downstream processing.
 
@@ -303,8 +303,9 @@ Collects result links (#results a[href]).
 
 Logs structured result summary with logSearchResults.
 
+```bash
 Returns { links, topicsArray, searched }.
-
+```
 
 ###  4️⃣ Specific Site Scraping Flow
 
